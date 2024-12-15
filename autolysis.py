@@ -365,5 +365,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-#$env:AIPROXY_TOKEN="eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjIyZjMwMDAzMTNAZHMuc3R1ZHkuaWl0bS5hYy5pbiJ9.WUELtGa5HIUynQp5apYXd0gafro7uqeCUxvdRAIOztk"
