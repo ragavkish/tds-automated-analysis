@@ -159,7 +159,7 @@ def encode_image_to_base64(image_path: str) -> str:
 
 def generate_narrative_with_visuals(analysis: Dict[str, Any], dataset_name: str, chart_paths: List[str]) -> str:
     """Use LLM to generate a narrative that includes insights from visualizations."""
-    # Embed visualizations in the prompt as base64 strings
+    # Prepare the prompt
     chart_data = []
     for path in chart_paths:
         try:
@@ -168,20 +168,30 @@ def generate_narrative_with_visuals(analysis: Dict[str, Any], dataset_name: str,
         except Exception as e:
             print(f"Failed to encode chart {path}: {e}")
 
-    # Update the prompt
     prompt = (
-        f"You are an expert data analyst with visual analysis capabilities. Analyze the following dataset "
-        f"and visualizations for insights:\n\n"
-        f"Dataset Name: {dataset_name}\n\n"
-        f"Summary Statistics: {analysis['summary_statistics']}\n"
-        f"Missing Values: {analysis['missing_values']}\n"
-        f"High Correlations: {analysis['high_correlation']}\n"
-        f"T-Tests Results: {analysis.get('t_tests', 'No t-tests were performed.')}\n"
-        f"PCA Results: {analysis.get('pca', 'No PCA information available.')}\n\n"
-        f"Visualizations (base64 encoded):\n"
+        f"You are an expert data analyst. Summarize insights for the dataset named '{dataset_name}'.\n\n"
+        f"Here is the analysis:\n"
+        f"- **Summary Statistics**: {analysis['summary_statistics']}\n"
+        f"- **Missing Values**: {analysis['missing_values']}\n"
+        f"- **Highly Correlated Features**: {analysis.get('high_correlation', 'None')}\n"
+        f"- **T-Tests Results**: {analysis.get('t_tests', 'No t-tests were performed.')}\n"
+        f"- **PCA Results**: {analysis.get('pca', 'No PCA information available.')}\n\n"
+        f"Additionally, visualizations are attached as base64 images for further context:\n"
         f"{chart_data}\n"
+        f"Please generate a concise narrative summarizing key findings and insights."
     )
-    return request_llm(prompt)
+
+    # Request narrative from LLM
+    response = request_llm(prompt)
+    
+    if not response.strip():
+        print("LLM failed to generate a narrative. Falling back to default.")
+        response = (
+            "The dataset has been analyzed for its summary statistics, missing values, "
+            "correlations, and PCA components. Key insights from the visualizations are "
+            "highlighted in the charts provided."
+        )
+    return response.strip()
 
 def refine_analysis_with_llm(df: pd.DataFrame, initial_analysis: Dict[str, Any], dataset_name: str) -> Dict[str, Any]:
     """Iteratively refine analysis based on LLM feedback."""
@@ -312,7 +322,7 @@ This analysis was automatically generated using the Autolysis script. Below is a
 
 ### Dataset Information
 - **Columns**: {len(analysis['data_types'])}
-- **Rows**: {len(df_name)} (approximate)
+- **Rows**: {analysis['summary_statistics'].get('count', 'N/A')}
 - **Column Data Types**:
 {"".join(f"- {col}: {dtype}\n" for col, dtype in analysis['data_types'].items())}
 
@@ -324,7 +334,7 @@ This analysis was automatically generated using the Autolysis script. Below is a
 {missing_values.to_markdown()}
 
 ### Narrative
-{narrative.strip()}
+{narrative if narrative else "The narrative could not be generated. Please review the analysis manually."}
 
 ### Visualizations
 """
