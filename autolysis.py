@@ -300,6 +300,9 @@ def create_readme(analysis: Dict[str, Any], narrative: str, charts: List[str], d
         folder_name (str): Folder to save the README.
     """
     readme_path = os.path.join(folder_name, "README.md")
+    summary_stats = pd.DataFrame(analysis['summary_statistics']).T.reset_index()
+    missing_values = pd.DataFrame.from_dict(analysis['missing_values'], orient='index', columns=['Missing Values'])
+    
     readme_content = f"""# Automated Data Analysis Report
 
 ## Dataset: {df_name}
@@ -309,29 +312,31 @@ This analysis was automatically generated using the Autolysis script. Below is a
 
 ### Dataset Information
 - **Columns**: {len(analysis['data_types'])}
-- **Rows**: {len(analysis['summary_statistics'])}
-- **Column Data Types**: {analysis['data_types']}
+- **Rows**: {len(df_name)} (approximate)
+- **Column Data Types**:
+{"".join(f"- {col}: {dtype}\n" for col, dtype in analysis['data_types'].items())}
 
 ### Key Findings
-- **Summary Statistics**:
-{pd.DataFrame(analysis['summary_statistics']).to_string()}
+#### Summary Statistics
+{summary_stats.to_markdown(index=False)}
 
-- **Missing Values**:
-{pd.Series(analysis['missing_values']).to_string()}
+#### Missing Values
+{missing_values.to_markdown()}
 
 ### Narrative
-{narrative}
+{narrative.strip()}
 
 ### Visualizations
 """
-
     for i, chart in enumerate(charts):
-        readme_content += f"- ![Chart {i + 1}](./{os.path.basename(chart)})\n"
+        readme_content += f"- Chart {i + 1}: ![Chart {i + 1}](./{os.path.basename(chart)})\n"
 
-    with open(readme_path, "w") as f:
-        f.write(readme_content)
-
-    print(f"README.md created at {readme_path}.")
+    try:
+        with open(readme_path, "w") as f:
+            f.write(readme_content)
+        print(f"README.md created successfully at {readme_path}.")
+    except Exception as e:
+        print(f"Error writing README.md: {e}")
 
 def main():
     """Main entry point of the script with LLM-driven iterative refinement."""
